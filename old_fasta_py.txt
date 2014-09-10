@@ -1,0 +1,95 @@
+def read_fasta_header(f):
+    '''
+    read the next fasta header
+    file must be at the start of the next record
+    or at end of file
+    return header
+    header is the full header line
+    do not mess about with parsing the header line at all
+    '''
+
+    line = f.readline()
+    
+    #end of file
+    if line == '': return None
+
+    #check the line looks like a fasta header
+    assert line.startswith('>'), 'expecting fasta header: %s'%line
+
+    #remove the leading '>' character and trailing whitespace
+    header = line[1:]
+    header = header.strip()
+
+    rec = {}
+    
+    #header is the complete line, minus the '>'
+    rec['header'] = header
+    
+    return rec
+
+def next_seqline(f):
+    '''
+    generator function to read next sequence line
+    '''
+    
+    while True:
+        line = read_seqline(f)
+        
+        #end of sequence lines
+        if line == None: break
+        
+        #yield next line
+        yield line
+    
+def read_seqline(f):
+    '''
+    read lines until end of file or next fasta header
+    '''
+    
+    while True:
+        posn = f.tell()
+        line = f.readline()
+        
+        #end of file or reached next fasta record
+        if line == '' or line.startswith('>'):
+            f.seek(posn)
+            return None
+        
+        #skip blank lines
+        line = line.strip()
+        if line == '': continue
+        
+        #remove any internal spaces or tabs
+        line = line.replace(' ','')
+        line = line.replace('\t','')
+        
+        #return sequence line
+        return line
+
+def read_fasta(f,storeseq=True):
+    '''
+    read next fasta record
+    file must be at start of record or end of file
+    '''
+    
+    #read header into record
+    rec = read_fasta_header(f)
+    
+    #end of file
+    if rec == None: return None
+        
+    if storeseq:
+        #read in the sequence data
+        rec['seq'] = ''.join([x for x in next_seqline(f)])
+        rec['len'] = len(rec['seq'])
+    else:
+        #determine length of sequence without storing it
+        length = 0
+        for x in next_seqline(f):
+            length += len(x)
+        
+        #return record without the sequence
+        rec['seq'] = None
+        rec['len'] = length
+        
+    return rec
