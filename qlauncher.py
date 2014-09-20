@@ -81,7 +81,10 @@ while True:
 
     #replace @{key} with value
     for key in keyval.iterkeys():
+        assert '@{%s}'%key in filledscript
         filledscript = filledscript.replace('@{%s}'%key, keyval[key])
+    
+    assert not '@{' in filledscript
     
     fout = open(tmpfile,'wb')
     fout.write(filledscript)
