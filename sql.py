@@ -2,6 +2,7 @@ import sqlite3,os
 
 def insert_row(cur,table,row):
     '''
+    cur can be connection or cursor
     insert row into table
     guess data types from row elements
     use None for NULL value
@@ -26,10 +27,17 @@ def insert_row(cur,table,row):
 
 def create_table(cur,table,spec):
     '''
+    cur can be connection or cursor
     create table with the given fields
     text is default type
     name/scaf/bp integer/cm real/type
     '''
+    
+    if type(cur) == sqlite3.Connection:
+        con = cur
+        cur = con.cursor()
+    else:
+        con = None
     
     cur.execute("drop table if exists %s;"%table)
     
@@ -49,6 +57,8 @@ def create_table(cur,table,spec):
             cur.execute("create table %s (%s %s);"%(table,field,_type))
         else:
             cur.execute("alter table %s add column %s %s;"%(table,field,_type))
+            
+    if con != None: con.commit()
 
 def sql_connect(fname):
     '''
