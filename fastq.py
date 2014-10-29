@@ -159,3 +159,4 @@ def load_fastq(fname):
     '''
     
     return [x for x in next_fastq(fname)]
+
