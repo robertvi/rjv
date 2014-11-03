@@ -8,6 +8,8 @@ call qsub on the file
 
 import inspect,os,re,time,random
 
+qsub_log_dir = '/home/vicker/qsub_logs'
+
 def next_sample(fname):
 	'''
 	get next non commented sample name
@@ -28,35 +30,44 @@ def next_sample(fname):
 	f.close()
 
 def myqsub(inp,out=None,dic=None,sge=True):
-	'''
-	inp - template file
-	out - output file
-	dic - key:value dictionary
-	
-	replace @{key} with value for all placeholders in the input file
-	write to output file
-	run qsub
-	
-	if dic == None, get key value pairs from name space of calling function
-	
-	sge == True => fix commented shell variables that confuse sun grid engine
-	
-	out == None => automatically generate a name, in tmp/ if it exists
-	'''
+    '''
+    inp - template file
+    out - output file
+    dic - key:value dictionary
 
-	#get local variables from calling function
-	if dic == None: dic = get_locals(inspect.currentframe().f_back.f_locals)
-		
-	#create random name for output file
-	if out == None:
-		out = 'tmp/' + str(random.random())[-6:] + '.' + ('%.9f'%time.time()).split('.')[1] + '.sge'
-		if not os.path.exists('tmp'): os.makedirs('tmp')
-		
-	#fill out the template file, save to new file	
-	ftemplate(inp,out,dic,sge)
-	
-	#call qsub on the new file, capture qsub output
-	os.system('qsub '+out+' | tee '+out+'.qsub')
+    replace @{key} with value for all placeholders in the input file
+    write to output file
+    run qsub
+
+    if dic == None, get key value pairs from name space of calling function
+
+    sge == True => fix commented shell variables that confuse sun grid engine
+
+    out == None => automatically generate a name, in tmp/ if it exists
+    '''
+
+    #get local variables from calling function
+    if dic == None: dic = get_locals(inspect.currentframe().f_back.f_locals)
+
+    #create random name for output file
+    if out == None:
+        out = 'tmp/' + str(random.random())[-6:] + '.' + ('%.9f'%time.time()).split('.')[1] + '.sge'
+        if not os.path.exists('tmp'): os.makedirs('tmp')
+
+    #fill out the template file, save to new file	
+    ftemplate(inp,out,dic,sge)
+
+    #call qsub on the new file, capture qsub output
+    os.system('qsub '+out+' | tee '+out+'.qsub')
+
+    #get job number
+    f = open(out+'.qsub')
+    data = f.read()
+    f.close()
+
+    jobnumber = int(data.strip().split()[2])
+
+    os.system('cp '+out+' '+qsub_log_dir+'/%d.sge'%jobnumber)
 
 def ftemplate(inp,out,dic=None,sge=True):
 	'''
