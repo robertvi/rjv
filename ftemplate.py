@@ -49,17 +49,14 @@ def myqsub(inp,out=None,dic=None,sge=True):
 		
 	#create random name for output file
 	if out == None:
-		out = str(random.random())[-6:] + '.' + ('%.9f'%time.time()).split('.')[1] + '.sge'
-		if os.path.isdir('tmp'):
-			out = 'tmp/'+out
-		else:
-			out = 'tmp_'+out
+		out = 'tmp/' + str(random.random())[-6:] + '.' + ('%.9f'%time.time()).split('.')[1] + '.sge'
+		if not os.path.exists('tmp'): os.makedirs('tmp')
 		
 	#fill out the template file, save to new file	
 	ftemplate(inp,out,dic,sge)
 	
-	#call qsub on the new file
-	os.system('qsub %s'%out)
+	#call qsub on the new file, capture qsub output
+	os.system('qsub '+out+' | tee '+out+'.qsub')
 
 def ftemplate(inp,out,dic=None,sge=True):
 	'''
