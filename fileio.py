@@ -377,3 +377,13 @@ def save_pickle(data,fname):
         
     cPickle.dump(data,f)
     f.close()
+
+def cat(fname):
+    '''
+    grab the whole file in a single command
+    '''
+    
+    f = open(fname)
+    data = f.read()
+    f.close()
+    return data

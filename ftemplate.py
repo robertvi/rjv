@@ -6,7 +6,7 @@ save as a new file
 call qsub on the file
 '''
 
-import inspect,os,re,time,random
+import inspect,os,re,time,random,subprocess
 
 qsub_log_dir = '/home/vicker/qsub_logs'
 
@@ -57,16 +57,19 @@ def myqsub(inp,out=None,dic=None,sge=True):
     #fill out the template file, save to new file	
     ftemplate(inp,out,dic,sge)
 
-    #call qsub on the new file, capture qsub output
+    #call qsub on the new file
+    #capture qsub output to a file
+    #output should contain the jobnumber
     os.system('qsub '+out+' | tee '+out+'.qsub')
 
-    #get job number
+    #get job number from the file
     f = open(out+'.qsub')
     data = f.read()
     f.close()
-
     jobnumber = int(data.strip().split()[2])
 
+    #store a copy of the script file to a global log directory
+    #rename the script file to be the job number
     os.system('cp '+out+' '+qsub_log_dir+'/%d.sge'%jobnumber)
 
 def ftemplate(inp,out,dic=None,sge=True):
@@ -148,6 +151,23 @@ def T(data,dic=None):
 		dic = get_locals(inspect.currentframe().f_back.f_locals)
 	
 	return sub_templates(data,dic)
+
+def run(cmd,dic=None):
+    '''
+    fill out a template string
+    run as shell command then return stdout and stderr
+    replaces @{key} with value
+    must replace all placeholders
+    not all keys need be present in the template
+    non string keys are ignored
+    '''
+
+    if dic == None:
+        #get local variables from calling function
+        dic = get_locals(inspect.currentframe().f_back.f_locals)
+
+    cmd = sub_templates(cmd,dic)
+    return subprocess.check_output(cmd,shell=True)
 
 def myqsub2(inp,out,dic=None,sge=True,bintype=None,arrayjobs=0,mem=1.0,rt=2,name='myjob',ops=None):
 	'''

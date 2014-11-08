@@ -269,19 +269,55 @@ def save_fasta(data,fname):
     for rec in data: write_fasta_rec(rec,f)
     f.close()
 
-def write_fasta(rec,f,width=80):
+def append_fasta(fa,f,width=80):
     '''
     save fasta header and sequence
     break into columns of requested width
+    append to file if it exists else create
     '''
     
-    f.write('>' + rec['header'] + _newline)
+    #if f is a filename open the file for append
+    flag = False
+    if type(f) == str:
+        f = open(f,'a')
+        flag = True
+    
+    f.write('>' + fa['header'] + _newline)
     
     pos = 0
     while True:
-        f.write(rec['seq'][pos:pos+width] + _newline)
+        f.write(fa['seq'][pos:pos+width] + _newline)
         pos += width
-        if pos >= len(rec['seq']): break
+        if pos >= len(fa['seq']): break
+        
+    if flag:
+        f.close()
+
+def write_fasta(fa,f,width=80):
+    '''
+    save fasta header and sequence
+    break into columns of requested width
+    
+    append to file if open already
+    else overwrite any existing file if filename given
+    '''
+    
+    #if f is a filename open the file for overwriting
+    flag = False
+    if type(f) == str:
+        f = open(f,'wb')
+        flag = True
+    
+    f.write('>' + fa['header'] + _newline)
+    
+    pos = 0
+    while True:
+        f.write(fa['seq'][pos:pos+width] + _newline)
+        pos += width
+        if pos >= len(fa['seq']): break
+        
+    if flag:
+        f.close()
 
 def read_fasta(f,storeseq=True):
     '''

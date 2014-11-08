@@ -16,6 +16,8 @@ using too much RAM or time etc
 
 import sys,os,datetime,time
 
+#see ftemplate.py myqsub function
+#place where copy of all qsub scripts are stored, renamed as [jobnumber].sge
 qsub_log_dir = '/home/vicker/qsub_logs'
 
 #user = sys.argv[1]
@@ -27,8 +29,8 @@ def get_vmem_rt(jobnumber,rec):
     try to extract h_vmem and h_rt
     '''
     
-    rec['h_vmem'] = ''
-    rec['h_rt'] = ''
+    rec['h_vmem'] = '-'
+    rec['h_rt'] = '-'
     
     fname = qsub_log_dir+'/'+jobnumber+'.sge'
     if not os.path.isfile(fname): return
@@ -72,8 +74,8 @@ def get_qacct_info(user):
         fields = ['jobname','jobnumber','failed','exit_status','maxvmem','qsub_time','start_time','end_time','ru_wallclock','hostname']
         data[i] = {k:dic[k] for k in fields}
         data[i]['ru_wallclock'] = seconds_to_hhmmss(int(data[i]['ru_wallclock']))
-        data[i]['h_vmem'] = ''
-        data[i]['h_rt'] = ''
+        data[i]['h_vmem'] = '-'
+        data[i]['h_rt'] = '-'
         data[i]['failed'] = data[i]['failed'].strip().split()[0]
         
         get_vmem_rt(data[i]['jobnumber'],data[i])
@@ -113,31 +115,33 @@ def get_qstat_info(user):
         rec = !qstat -j $jobid
         
         fields = ['jobname','jobnumber','failed','exit_status','h_vmem','maxvmem','h_rt','ru_wallclock']
-        item = {k:'' for k in fields}
+        item = {k:'-' for k in fields}
         
         item['jobnumber'] = jobid
         item['jobname'] = [x.strip() for x in rec if x.startswith('job_name:')][0].split()[1].strip()
-        maxvmem = [x.strip() for x in rec if x.startswith('usage    1:')][0]
-        maxvmem = [x for x in maxvmem.split() if x.startswith('maxvmem')][0]
-        item['maxvmem'] = maxvmem.split('=')[1].strip().strip(',')
         
         if state == 'r':
+            #get maxvmem from qstat info
+            maxvmem = [x.strip() for x in rec if x.startswith('usage    1:')][0]
+            maxvmem = [x for x in maxvmem.split() if x.startswith('maxvmem')][0]
+            item['maxvmem'] = maxvmem.split('=')[1].strip().strip(',')
+
             #calculate running time from current time and start time
             delta = datetime.datetime.now() - parse_american_date(stime)
             item['ru_wallclock'] = seconds_to_hhmmss(int(delta.total_seconds()))
-            item['exit_status'] = 'RUNNING'
+            item['exit_status'] = 'RUN'
             
         elif state == 'qw':
             item['exit_status'] = 'QUEUED'
         
         elif state == 't':
-            item['exit_status'] = 'STARTING'
+            item['exit_status'] = 'START'
             
         elif 'E' in state:
             item['exit_status'] = 'ERROR'
             
         else:
-            item['exit_status'] = 'UNKNOWN'
+            item['exit_status'] = '????'
             
         get_vmem_rt(jobid,item)
         
@@ -147,10 +151,12 @@ def get_qstat_info(user):
 
 def print_info(data):
     fields = ['jobname','jobnumber','failed','exit_status','h_vmem','maxvmem','h_rt',  'ru_wallclock']
-    forstr = ['%025s',  '%012s',    '%010s', '%012s',      '%015s', '%015s',  '%015s', '%012s']
+    forstr = ['%024s',  '%010s',    '%07s',  '%07s',       '%08s', '%012s',  '%012s', '%012s']
 
     print ' '.join([ forstr[i]%k for i,k in enumerate(fields)])
     for x in data:
+        if len(x['jobname']) > 24:
+            x['jobname'] = x['jobname'][:11] + '..' + x['jobname'][-11:]
         print ' '.join([ forstr[i]%x[k] for i,k in enumerate(fields)])
 
 #=======================get info on completed jobs
