@@ -16,7 +16,7 @@ def next_line(fname,sep='guess',comment='#',skip_blank=True):
     or given as option
     
     sep = None => do not split into tokens
-    sep = ''   => whitespace as separtor
+    sep = ''   => whitespace as separator
     '''
 
     if type(fname) == str:
@@ -46,15 +46,13 @@ def next_line(fname,sep='guess',comment='#',skip_blank=True):
         #skip blank lines
         if line == '': continue
         
-        #split using separator, yield token list
         if sep != None:
+            #split using separator, yield token list
             tok = line.split(sep)
-            print sep
-            print tok
             yield tok
-            
-        #yield whole line
-        yield line
+        else:
+            #yield whole line
+            yield line
 
     f.close()
 
