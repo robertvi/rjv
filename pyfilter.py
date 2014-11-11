@@ -8,7 +8,7 @@ usage: cat inpfile | pyfilter.py 'expression' > outfile
 import sys
 
 if len(sys.argv) < 1 or sys.argv[1] == '--help':
-    print "usage: cat inpfile | pyfilter.py "'%.3e'%(float(tok[0]))" > outfile"
+    print """usage: cat inpfile | pyfilter.py "'%.3e'%(float(tok[0]))" > outfile"""
     exit()
 
 expr = sys.argv[1]
