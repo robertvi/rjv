@@ -25,7 +25,7 @@ def next_line(fname,sep='guess',comment='#',skip_blank=True):
 
         if sep == 'guess':
             #guess separator from filename extension
-            exts = {'.tsv':'\t', '.tab':'\t', '.csv':',', '.ssv':''}
+            exts = {'tsv':'\t', 'tab':'\t', 'csv':',', 'ssv':''}
             ext = fname.split('.')[-1]
             assert ext.lower() in exts.keys()
             sep = exts[ext.lower()]
