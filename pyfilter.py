@@ -5,9 +5,9 @@ line based filtering using python
 usage: cat inpfile | pyfilter.py 'expression' > outfile
 '''
 
-import sys
+import sys,re,time,math
 
-if len(sys.argv) < 1 or sys.argv[1] == '--help':
+if len(sys.argv) < 2:
     print """usage: cat inpfile | pyfilter.py "'%.3e'%(float(tok[0]))" > outfile"""
     exit()
 
