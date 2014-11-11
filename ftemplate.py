@@ -15,8 +15,8 @@ def next_line(fname,sep='guess',comment='#',skip_blank=True):
     return next line of file split by separator guessed from file extension
     or given as option
     
-    sep=None => do not split into tokens
-    sep='' => whitespace as separtor
+    sep = None => do not split into tokens
+    sep = ''   => whitespace as separtor
     '''
 
     if type(fname) == str:
@@ -49,6 +49,8 @@ def next_line(fname,sep='guess',comment='#',skip_blank=True):
         #split using separator, yield token list
         if sep != None:
             tok = line.split(sep)
+            print sep
+            print tok
             yield tok
             
         #yield whole line
