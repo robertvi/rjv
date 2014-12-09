@@ -75,7 +75,7 @@ def next_sample(fname):
 
     f.close()
 
-def myqsub(inp,out=None,dic=None,sge=True):
+def myqsub(inp,out=None,dic=None,sge=True,wait=False,makelog=True,templatedir='job_templates/'):
     '''
     inp - template file
     out - output file
@@ -90,7 +90,16 @@ def myqsub(inp,out=None,dic=None,sge=True):
     sge == True => fix commented shell variables that confuse sun grid engine
 
     out == None => automatically generate a name, in tmp/ if it exists
+    
+    wait ==> wait for job to complete before returning
+    
+    makelog ==> create a directory '../logs' if it does not exist
     '''
+
+    #create logs directory if not already present
+    if makelog == True:
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
 
     #get local variables from calling function
     if dic == None: dic = get_locals(inspect.currentframe().f_back.f_locals)
@@ -100,13 +109,20 @@ def myqsub(inp,out=None,dic=None,sge=True):
         out = 'tmp/' + str(random.random())[-6:] + '.' + ('%.9f'%time.time()).split('.')[1] + '.sge'
         if not os.path.exists('tmp'): os.makedirs('tmp')
 
-    #fill out the template file, save to new file	
+    if not os.path.exists(inp):
+        if templatedir != None:
+            inp = os.path.join(templatedir,inp)
+
+    #fill out the template file, save to new file
     ftemplate(inp,out,dic,sge)
 
     #call qsub on the new file
     #capture qsub output to a file
     #output should contain the jobnumber
-    os.system('qsub '+out+' | tee '+out+'.qsub')
+    if wait:
+        os.system('qsub -sync y '+out+' | tee '+out+'.qsub')
+    else:
+        os.system('qsub '+out+' | tee '+out+'.qsub')
 
     #get job number from the file
     f = open(out+'.qsub')
@@ -117,6 +133,8 @@ def myqsub(inp,out=None,dic=None,sge=True):
     #store a copy of the script file to a global log directory
     #rename the script file to be the job number
     os.system('cp '+out+' '+qsub_log_dir+'/%d.sge'%jobnumber)
+    
+    return jobnumber
 
 def ftemplate(inp,out,dic=None,sge=True):
     '''

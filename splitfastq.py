@@ -3,6 +3,8 @@
 '''
 split fastq into chunks based on record counting
 i.e. does not require seeking within the file
+
+this version outputs only one chunk, ie it outputs only every nth record
 '''
 
 import os,sys
