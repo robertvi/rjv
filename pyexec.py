@@ -15,10 +15,12 @@ expr = sys.argv[1]
 ct = 0
 l = []
 d = {}
+n = 0
 
 for line in sys.stdin:
+    n += 1
     csv = line.strip().split(',')
     tsv = line.strip().split('\t')
     ssv = line.strip().split()
     
-    print eval(expr)
+    exec expr
