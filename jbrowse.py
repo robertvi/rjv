@@ -1,6 +1,6 @@
 import os
 
-def show_blast_hits(hits,query=False):
+def show_blast_hits(hits,query=False,pause=False):
     '''
     launch one firefox tab for each subject (or query) id
     add additional jbrowse track showing where the blast hits are
@@ -55,6 +55,9 @@ def show_blast_hits(hits,query=False):
         url += '&addTracks=[{"label":"blast","store":"url","type":"JBrowse/View/Track/HTMLFeatures"}]'
         url += '&tracks=HIGH,LOW,augMaz,augOat,PASA,exOat,exTran,exUni,RM,TPSI,NNN,blast'
         
-        print url
+        #print url
         
         os.system("firefox '%s'"%url)#url string must be protected from bash using single quotes
+        
+        if pause == True:
+            raw_input('press enter...')

@@ -17,6 +17,24 @@ def revcomp(kmer):
         
     return rev
         
+def revcomp_n(kmer):
+    '''
+    return reverse complement of the kmer
+    only 'ATCGN' are considered legitimate bases
+    '''
+    
+    rev = ''
+    
+    for ch in kmer:
+        if   ch == 'A': rev = 'T' + rev
+        elif ch == 'T': rev = 'A' + rev
+        elif ch == 'C': rev = 'G' + rev
+        elif ch == 'G': rev = 'C' + rev
+        elif ch == 'N': rev = 'N' + rev
+        else:           raise Exception
+        
+    return rev
+        
 def kmer2integer(kmer):
     '''
     generate integer representation of the kmer

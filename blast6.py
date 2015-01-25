@@ -27,3 +27,9 @@ def next_hit(f):
         yield hit
         
     if flag: f.close()
+
+def write_hit(hit,f):
+    '''
+    write a blast hit to the file
+    '''
+    
