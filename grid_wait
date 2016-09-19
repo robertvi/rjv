@@ -1,0 +1,158 @@
+#!/bin/bash
+
+#
+# wait for jobs to finish running, then exit status info
+# jobs can be referred to by name or id
+#
+
+set -eu
+
+if [ "$#" == "0" ]
+then
+    echo "usage: grid_wait [-Ppoll(3)] [-Ljobidfile] [-Ijobid[,jobid...] [-Ijobid[,jobid...] [-A] [-Ttaillines] [-O]"
+    exit
+fi
+
+MATCH=""
+EXPITEMS=0
+POLL=3 #default poll interval is three seconds
+LISTFILE=""
+SKIP="YES"
+TAIL="5"
+OUTERR="NO"
+
+ACCTSIZES=${ACCTSIZES:-/home/vicker/gridengine/accountfilesizes} #file listing size of acctfile each day
+ACCTFILE=${ACCTFILE:-/var/lib/gridengine/blacklace/common/accounting} #file containing exit status info from grid engine
+
+while true
+do
+    arg="$1"
+    
+    if [ "${arg:0:1}" != '-' ]
+    then
+        echo "invalid argument:" $arg
+        exit 1
+    fi
+    
+    case "${arg:1:1}" in
+    #name of file containing list of jobids
+    L)
+        LISTFILE="${arg:2:${#arg}-2}"
+        for jobid in $(cat ${LISTFILE})
+        do
+            MATCH="${MATCH} -e ${jobid}"
+            EXPITEMS=$(( EXPITEMS + 1))
+        done
+        ;;
+    #wait for numbered job(s) to complete eg -I123 -I345
+    I)
+        jobidlist="${arg:2:${#arg}-2}"
+        for jobid in $(echo ${jobidlist} | tr ',' ' ')
+        do
+            MATCH="${MATCH} -e ${jobid}"
+            EXPITEMS=$(( EXPITEMS + 1))
+        done
+        ;;
+    #how many lines of error log to print
+    T)
+        TAIL="${arg:2:${#arg}-2}"
+        ;;
+    #look through all completed jobs info, do not skip old jobs info
+    A)
+        SKIP="NO"
+        ;;
+    #dump tail of stdout log file as well as stderr if exit != 0
+    O)
+        OUTERR="YES"
+        ;;
+    #poll running jobs every ${POLL} seconds
+    P)
+        POLL="${arg:2:${#arg}-2}"
+        ;;
+    *)
+        echo "Unknown option ${arg}"
+        exit 1
+    esac
+    
+    shift
+    
+    if [ "$#" == "0" ] ; then break ; fi
+done
+
+if [ "${MATCH}" == "" ]
+then
+    echo "no jobs specified"
+    exit
+fi
+
+#work out how much old data in accounting file to skip
+YESTERDAY=$(date -u -d "yesterday 00:00 " '+%Y-%m-%d') #yesterdays date
+if [ "${SKIP}" == "YES" ]
+then
+    FILESIZE=$(cat ${ACCTSIZES} | grep ${YESTERDAY} | head -n 1 | cut -d' ' -f2) #skip old jobs info
+else
+    FILESIZE=0 #search all jobs info
+fi
+
+#wait until expected number of items are retrieved from accounting file
+QSTATMATCH=$(echo '' ${MATCH} | sed 's/-e /-e ^/g')
+while true
+do
+    #collect qstat info on running jobs
+    count=$(qstat | grep -w ${QSTATMATCH} | wc --lines)
+    qwcount=$(qstat | grep -w ${QSTATMATCH}| grep ' qw ' | wc --lines)
+    rcount=$(qstat  | grep -w ${QSTATMATCH}| grep ' r ' | wc --lines)
+    echo -ne "total jobids:${EXPITEMS} qstat:${count} of which qw:${qwcount} r:${rcount}           \r"
+
+    #wait for all items to appear in account file
+    NITEMS=$(tail -c +${FILESIZE} ${ACCTFILE} | cut -d: -f6 | grep -w ${MATCH} | wc --lines)
+    if [ "${EXPITEMS}" == "${NITEMS}" ]
+    then
+        break
+    fi
+    sleep ${POLL}
+done
+
+#report job exit status
+
+DIV='----------------------------------------------------------------------------------------------------------------'
+FORMAT="%-23s | % -10s | %-25s | %-9s | %-4s | %-4s | %-7s | %-7s\n"
+echo ${DIV}
+printf "${FORMAT}" host user name jid fail exit secs maxvmem
+echo "${DIV}"
+FORMAT="%-23s | % -10s | %-25s | %-9s | %-4s | %-4s | %-7.1e | %-7.1e\n"
+
+RETCODE=0
+
+for line in $(tail -c +${FILESIZE} ${ACCTFILE} | grep -w ${MATCH} | tr ' ' '_')
+do
+    #check it is a complete matching jobid
+    JIDCHECK=$(echo ${line} | cut -d: -f6 | grep -w ${MATCH} | wc --lines)
+    if [ "${JIDCHECK}" != "1" ] ; then continue ; fi
+    
+    DATA=$(echo ${line} | cut --output-delimiter=" " -d: -f2,4,5,6,12,13,14,43)
+    printf "${FORMAT}" ${DATA}
+
+    ERR=$(echo ${line} | cut -d: -f13)
+    if [ "${ERR}" == "0" -o "${TAIL}" == "0" ] ; then continue ; fi
+
+    RETCODE=1
+    JNAME=$(echo ${line} | cut -d: -f5)
+    JID=$(echo ${line} | cut -d: -f6)
+    ERRLOG=$(find . -name ${JNAME}.${JID}.err)
+    if [ "${ERRLOG}" == "" ]
+    then
+        echo ${ERRLOG}
+        echo ${JNAME}.${JID}.err not found
+    else
+        echo ${DIV}
+        tail -n ${TAIL} ${ERRLOG}
+        if [ "${OUTERR}" == "YES" ] ; then
+            echo ${ERRLOG/\.err/.out}
+            tail -n ${TAIL} ${ERRLOG/\.err/.out}
+        fi
+        echo ${DIV}
+    fi
+done
+
+exit ${RETCODE}
