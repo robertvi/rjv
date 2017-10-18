@@ -9,13 +9,13 @@ set -eu
 
 if [ "$#" == "0" ]
 then
-    echo "usage: grid_wait [-Ppoll(2)] [-Ljobidfile] [-Ijobid[,jobid...] [-Ijobid[,jobid...] [-A] [-Ttaillines] [-O]"
+    echo "usage: grid_wait [-Ppoll(3)] [-Ljobidfile] [-Ijobid[,jobid...] [-Ijobid[,jobid...] [-A] [-Ttaillines] [-O]"
     exit
 fi
 
 MATCH=""
 EXPITEMS=0
-POLL=2 #default poll interval is three seconds
+POLL=3 #default poll interval is three seconds
 LISTFILE=""
 SKIP="YES"
 TAIL="5"
@@ -86,26 +86,18 @@ then
 fi
 
 #work out how much old data in accounting file to skip
-DATESTR=$(date -u -d "week ago 00:00" '+%Y-%m-%d') #date one week ago
+YESTERDAY=$(date -u -d "yesterday 00:00 " '+%Y-%m-%d') #yesterdays date
 if [ "${SKIP}" == "YES" ]
 then
-    FILESIZE=$(cat ${ACCTSIZES} | grep ${DATESTR} | head -n 1 | cut -d' ' -f2) #skip old jobs info
+    FILESIZE=$(cat ${ACCTSIZES} | grep ${YESTERDAY} | head -n 1 | cut -d' ' -f2) #skip old jobs info
 else
     FILESIZE=0 #search all jobs info
 fi
 
 #wait until expected number of items are retrieved from accounting file
-QSTATMATCH=$(echo '' ${MATCH} | sed 's/-e /-e ^/g')
 while true
 do
-    #collect qstat info on running jobs
-    count=$(qstat | grep -w ${QSTATMATCH} | wc --lines)
-    qwcount=$(qstat | grep -w ${QSTATMATCH}| grep ' qw ' | wc --lines)
-    rcount=$(qstat  | grep -w ${QSTATMATCH}| grep ' r ' | wc --lines)
-    echo -ne "total jobids:${EXPITEMS} qstat:${count} of which qw:${qwcount} r:${rcount}           \r"
-
-    #wait for all items to appear in account file
-    NITEMS=$(tail -c +${FILESIZE} ${ACCTFILE} | cut -d: -f6 | grep -w ${MATCH} | wc --lines)
+    NITEMS=$(tail -c +${FILESIZE} ${ACCTFILE} | cut -d: -f6 | grep ${MATCH} | wc --lines)
     if [ "${EXPITEMS}" == "${NITEMS}" ]
     then
         break
@@ -124,10 +116,10 @@ FORMAT="%-23s | % -10s | %-25s | %-9s | %-4s | %-4s | %-7.1e | %-7.1e\n"
 
 RETCODE=0
 
-for line in $(tail -c +${FILESIZE} ${ACCTFILE} | grep -w ${MATCH} | tr ' ' '_')
+for line in $(tail -c +${FILESIZE} ${ACCTFILE} | grep ${MATCH} | tr ' ' '_')
 do
-    #check it is a complete matching jobid
-    JIDCHECK=$(echo ${line} | cut -d: -f6 | grep -w ${MATCH} | wc --lines)
+    #check it was a matching jobid not another column
+    JIDCHECK=$(echo ${line} | cut -d: -f6 | grep ${MATCH} | wc --lines)
     if [ "${JIDCHECK}" != "1" ] ; then continue ; fi
     
     DATA=$(echo ${line} | cut --output-delimiter=" " -d: -f2,4,5,6,12,13,14,43)

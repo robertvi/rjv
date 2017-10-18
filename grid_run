@@ -54,6 +54,7 @@ do
     #jobname
     J)
         NAME=${arg:2:${#arg}-2}
+        NAME=${NAME//\//_}       #ensure no forward slashes in name
         ;;
     #memory (gigabytes)
     M)
